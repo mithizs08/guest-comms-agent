@@ -4,6 +4,18 @@
     "listing_id": "3988362",
     "name": "The Sanctuary, Private Garden Apartment at Bondi Beach",
     "neighbourhood": "Waverley",
+    "suburb_aliases": {
+      "value": [
+        "Waverley",
+        "Bondi",
+        "Bondi Beach",
+        "North Bondi",
+        "Bondi Junction",
+        "Bronte",
+        "Tamarama"
+      ],
+      "demo_added": true
+    },
     "property_type": "Entire rental unit",
     "description": "Soak up the North sun, have an outdoor shower and Chilax on the comfy hammock & sun beds. \nEnjoy a delicious BBQ in your private, large, tropical backyard. \nOur spacious, bright and airy apartment is fully self contained with a \nvery recent renovation & redecoration and everything provided. We are on the South Bondi end amongst trees and a peaceful neighborhood, yet so close to Beaches, CBD, Harbour Transport, shopping & Restaurants.\nWe live in the main house, upstairs and happy to help you.",
     "amenities": [
@@ -143,6 +155,16 @@
     "listing_id": "905341218171745855",
     "name": "Grand family entertainer - 6km Manly Beach",
     "neighbourhood": "Manly",
+    "suburb_aliases": {
+      "value": [
+        "Manly",
+        "Seaforth",
+        "Fairlight",
+        "Balgowlah",
+        "Clontarf"
+      ],
+      "demo_added": true
+    },
     "property_type": "Entire rental unit",
     "description": "Long or short stay.  Welcome to your harborside sanctuary in a private and peaceful Seaforth near Manly Beach.\nFiltered Middle Harbor views, modern amenities, elegant interiors, minutes to CBD, Manly Beach, Balmoral Beach, Mosman's Taranga Zoo, cafes , perfect for a memorable stay with a playground, across the road for families.\nWith multiple living spaces, oversized 4 bedrooms, and Free high-speed Wi-Fi, relax with your family and friends.\nADDITIONAL GUESTS WILL BE CHARGED $100 PER NIGHT.",
     "amenities": [
@@ -288,6 +310,17 @@
     "listing_id": "582717674379543006",
     "name": "♥️Brand NEW VIP Luxury 5/5 Star Beachside Escape🧘",
     "neighbourhood": "Randwick",
+    "suburb_aliases": {
+      "value": [
+        "Randwick",
+        "Coogee",
+        "Clovelly",
+        "Maroubra",
+        "Kensington",
+        "Kingsford"
+      ],
+      "demo_added": true
+    },
     "property_type": "Entire home",
     "description": "Brand NEW beach holiday home\nGreat value Luxury in Sydney\n\n5 Star Experience\nAmazing Ocean Views\nSmart home, heated floor, blinds and lights\n\nRead our guests 5 star reviews!\n\nFree Breakfast, Coffee, Beer & Wine\nFull cooking facilities\n\nBest of Sydney is here!\nWOW! Action-packed adventures watch whales breaching from your bedroom\n\nWalk to everything\nBeach, ocean pool, restaurants, gym, shops, chemists, RSL club and headland walks\n\n12min Uber/Taxi from Sydney Airport\n2min Walk to beach",
     "amenities": [
@@ -439,6 +472,18 @@
     "listing_id": "1197661023709210382",
     "name": "Stunning Harbour Views-Cosy & Convenient w/Parking",
     "neighbourhood": "North Sydney",
+    "suburb_aliases": {
+      "value": [
+        "North Sydney",
+        "Neutral Bay",
+        "Kirribilli",
+        "Cremorne",
+        "Crows Nest",
+        "Milsons Point",
+        "McMahons Point"
+      ],
+      "demo_added": true
+    },
     "property_type": "Entire rental unit",
     "description": "Welcome to your comfortable and well-located 2-bedroom retreat in Neutral Bay, where floor-to-ceiling glass windows offer stunning panoramic views of Sydney Harbour from both the living room and the main bedroom areas. There are also two dedicated tandem parking spots in the building for your convenience. Whether you’re enjoying your morning coffee as the sun rises over the city or unwinding with the twinkling skyline at night, this apartment provides a truly memorable stay.",
     "amenities": [
@@ -565,6 +610,17 @@
     "listing_id": "741100233452098946",
     "name": "Luxury Retreat Home - 4Bed House - Mins from CBD",
     "neighbourhood": "Marrickville",
+    "suburb_aliases": {
+      "value": [
+        "Marrickville",
+        "Dulwich Hill",
+        "Petersham",
+        "Stanmore",
+        "Tempe",
+        "Sydenham"
+      ],
+      "demo_added": true
+    },
     "property_type": "Entire home",
     "description": "Enjoy a stylish experience at this centrally located 4 bed House, with 2 bath and parking for 2 standard Cars.\nThis immaculately presented home is sure to impress, as it is beautifully built to the highest quality and fully equipped for a wonderful stay. \nLocated only few mins from the trendy King Street (Newtown), Enmore Theatre and only about a 15min drive to Opera House and CBD. \nWith a great indoor/outdoor entertaining spaces and a large kitchen, it caters well for the entire family/group.",
     "amenities": [

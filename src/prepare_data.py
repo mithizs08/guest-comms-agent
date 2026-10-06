@@ -23,6 +23,17 @@ OUT_PATH = ROOT / "data" / "properties.json"
 # These are well-known short-stay areas; one listing is picked from each.
 PREFERRED_AREAS = ["Waverley", "Manly", "Randwick", "North Sydney", "Marrickville"]
 
+# Guests name suburbs ("Bondi", "Seaforth"), not council areas, so the agent
+# needs these to match an email to a property. Curated from public geography,
+# not from the listing data, hence marked demo_added.
+AREA_SUBURBS = {
+    "Waverley": ["Waverley", "Bondi", "Bondi Beach", "North Bondi", "Bondi Junction", "Bronte", "Tamarama"],
+    "Manly": ["Manly", "Seaforth", "Fairlight", "Balgowlah", "Clontarf"],
+    "Randwick": ["Randwick", "Coogee", "Clovelly", "Maroubra", "Kensington", "Kingsford"],
+    "North Sydney": ["North Sydney", "Neutral Bay", "Kirribilli", "Cremorne", "Crows Nest", "Milsons Point", "McMahons Point"],
+    "Marrickville": ["Marrickville", "Dulwich Hill", "Petersham", "Stanmore", "Tempe", "Sydenham"],
+}
+
 # The only columns ever read from the raw file. Host columns are never loaded,
 # except host_name, which is used solely to reject descriptions that mention
 # the host and is discarded before anything is saved.
@@ -134,6 +145,7 @@ def build_property(row: pd.Series, code: str) -> dict:
         "listing_id": str(row["id"]),
         "name": row["name"],
         "neighbourhood": row["neighbourhood_cleansed"],
+        "suburb_aliases": demo(AREA_SUBURBS[row["neighbourhood_cleansed"]]),
         "property_type": row["property_type"],
         "description": row["description"],
         "amenities": amenities,
