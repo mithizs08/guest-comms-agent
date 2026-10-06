@@ -3,6 +3,7 @@ property, draft a reply with Claude, and triage it.
 
 Usage:
     python src/agent.py data/sample_emails/email_01.txt [more files...]
+    python src/agent.py --local data/sample_emails/email_01.txt   # JSON file instead of HubSpot
 """
 
 import json
@@ -13,6 +14,8 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
+from hubspot_client import HubSpotPropertySource, PropertySourceError
+
 ROOT = Path(__file__).resolve().parent.parent
 MODEL = "claude-sonnet-5-5"
 CATEGORIES = ["routine", "human_review", "urgent", "needs_owner_clarification"]
@@ -20,9 +23,9 @@ PLATFORMS = ["airbnb", "stayz", "booking_com", "unknown"]
 
 
 # --- Property data source ----------------------------------------------------
-# Everything else in the agent talks to this one interface (all_properties),
-# so moving to HubSpot means writing HubSpotPropertySource and changing the
-# PROPERTY_SOURCE line below.
+# Everything else in the agent talks to one interface (all_properties), so
+# the data source is a single line in get_property_source. The JSON file
+# stays as an offline fallback for development and when HubSpot is down.
 
 class JsonPropertySource:
     def __init__(self, path: Path):
@@ -32,7 +35,10 @@ class JsonPropertySource:
         return json.loads(self.path.read_text())
 
 
-PROPERTY_SOURCE = JsonPropertySource(ROOT / "data" / "properties.json")
+def get_property_source(local: bool = False):
+    if local:
+        return JsonPropertySource(ROOT / "data" / "properties.json")
+    return HubSpotPropertySource()
 
 
 # --- Email parsing -----------------------------------------------------------
@@ -250,10 +256,24 @@ def enforce_reply_rules(result: dict) -> dict:
     return result
 
 
-def process_email(client: anthropic.Anthropic, raw: str) -> dict:
+def process_email(client: anthropic.Anthropic, raw: str, source) -> dict:
     email = parse_email(raw)
     platform = detect_platform(client, email)
-    prop = identify_property(email, PROPERTY_SOURCE.all_properties())
+
+    try:
+        properties = source.all_properties()
+    except PropertySourceError as e:
+        # Without property data any draft would be guesswork, so skip Claude
+        # and hand the email to a person instead of crashing the run.
+        return {
+            "platform": platform,
+            "property_code": "unknown",
+            "category": "human_review",
+            "reason": f"Property data unavailable: {e}",
+            "draft_reply": "",
+            "missing_info": [],
+        }
+    prop = identify_property(email, properties)
 
     property_info = (
         json.dumps(guest_safe_view(prop), indent=2, ensure_ascii=False)
@@ -284,12 +304,16 @@ def process_email(client: anthropic.Anthropic, raw: str) -> dict:
 
 
 def main() -> None:
-    if len(sys.argv) < 2:
-        sys.exit("Usage: python src/agent.py EMAIL_FILE [EMAIL_FILE ...]")
+    args = sys.argv[1:]
+    local = "--local" in args
+    paths = [a for a in args if a != "--local"]
+    if not paths:
+        sys.exit("Usage: python src/agent.py [--local] EMAIL_FILE [EMAIL_FILE ...]")
     load_dotenv(ROOT / ".env")
     client = anthropic.Anthropic()
-    for path in sys.argv[1:]:
-        result = process_email(client, Path(path).read_text())
+    source = get_property_source(local)
+    for path in paths:
+        result = process_email(client, Path(path).read_text(), source)
         print(f"=== {path}")
         print(json.dumps(result, indent=2, ensure_ascii=False))
 

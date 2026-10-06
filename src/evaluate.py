@@ -4,6 +4,7 @@ and safety-check failures.
 Usage:
     python src/evaluate.py            # full eval, saves results
     python src/evaluate.py 11 13      # only these cases, prints drafts
+    python src/evaluate.py --local    # JSON file instead of HubSpot
 
 Writes a Markdown summary to output/eval_summary.md and raw results to
 output/eval_results.json.
@@ -20,7 +21,7 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
-from agent import CATEGORIES, CONTACT_PATTERNS, MODEL, ROOT, process_email
+from agent import CATEGORIES, CONTACT_PATTERNS, MODEL, ROOT, get_property_source, process_email
 
 LABELS_PATH = ROOT / "data" / "eval" / "labels.json"
 OUTPUT_DIR = ROOT / "output"
@@ -37,9 +38,9 @@ FAKE_VALUE = re.compile(r"FAKE-", re.I)
 TIMING_WORDS = re.compile(r"\b(shortly|soon|right away|as soon as possible|asap)\b", re.I)
 
 
-def run_once(client: anthropic.Anthropic, case: dict) -> dict:
+def run_once(client: anthropic.Anthropic, case: dict, source) -> dict:
     try:
-        return process_email(client, (ROOT / case["file"]).read_text())
+        return process_email(client, (ROOT / case["file"]).read_text(), source)
     except Exception as e:  # one failed call shouldn't sink the whole eval
         return {"error": f"{type(e).__name__}: {e}"}
 
@@ -56,7 +57,7 @@ def draft_check_failures(draft: str) -> list[str]:
     return failures
 
 
-def evaluate(cases: list[dict], results: dict[str, list[dict]]) -> str:
+def evaluate(cases: list[dict], results: dict[str, list[dict]], source_name: str) -> str:
     field_correct = Counter()
     cat_total, cat_correct = Counter(), Counter()
     consistent = failed_runs = 0
@@ -95,7 +96,7 @@ def evaluate(cases: list[dict], results: dict[str, list[dict]]) -> str:
     lines = [
         "## Evaluation results",
         "",
-        f"{len(cases)} labelled cases × {RUNS} runs = {total_runs} runs · model `{MODEL}` · {date.today().isoformat()}",
+        f"{len(cases)} labelled cases × {RUNS} runs = {total_runs} runs · model `{MODEL}` · data source: {source_name} · {date.today().isoformat()}",
         "",
         "| Metric | Result |",
         "|---|---|",
@@ -140,19 +141,21 @@ def main() -> None:
     cases = json.loads(LABELS_PATH.read_text())
     # Re-checking a couple of cases after a prompt change is much cheaper than
     # a full run, but only a full run should overwrite the saved results.
-    selected = sys.argv[1:]
+    local = "--local" in sys.argv[1:]
+    selected = [a for a in sys.argv[1:] if a != "--local"]
+    source = get_property_source(local)
     if selected:
         cases = [c for c in cases if c["case"] in selected]
 
     jobs = [(case, run) for case in cases for run in range(RUNS)]
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
-        outputs = list(pool.map(lambda job: run_once(client, job[0]), jobs))
+        outputs = list(pool.map(lambda job: run_once(client, job[0], source), jobs))
 
     results = defaultdict(list)
     for (case, _), output in zip(jobs, outputs):
         results[case["case"]].append(output)
 
-    summary = evaluate(cases, results)
+    summary = evaluate(cases, results, "JSON file" if local else "HubSpot")
     if not selected:
         OUTPUT_DIR.mkdir(exist_ok=True)
         (OUTPUT_DIR / "eval_results.json").write_text(json.dumps(results, indent=2, ensure_ascii=False))
