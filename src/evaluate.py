@@ -2,7 +2,8 @@
 and safety-check failures.
 
 Usage:
-    python src/evaluate.py
+    python src/evaluate.py            # full eval, saves results
+    python src/evaluate.py 11 13      # only these cases, prints drafts
 
 Writes a Markdown summary to output/eval_summary.md and raw results to
 output/eval_results.json.
@@ -10,6 +11,7 @@ output/eval_results.json.
 
 import json
 import re
+import sys
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -136,6 +138,11 @@ def main() -> None:
     load_dotenv(ROOT / ".env")
     client = anthropic.Anthropic()
     cases = json.loads(LABELS_PATH.read_text())
+    # Re-checking a couple of cases after a prompt change is much cheaper than
+    # a full run, but only a full run should overwrite the saved results.
+    selected = sys.argv[1:]
+    if selected:
+        cases = [c for c in cases if c["case"] in selected]
 
     jobs = [(case, run) for case in cases for run in range(RUNS)]
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
@@ -146,10 +153,15 @@ def main() -> None:
         results[case["case"]].append(output)
 
     summary = evaluate(cases, results)
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    (OUTPUT_DIR / "eval_results.json").write_text(json.dumps(results, indent=2, ensure_ascii=False))
-    (OUTPUT_DIR / "eval_summary.md").write_text(summary)
+    if not selected:
+        OUTPUT_DIR.mkdir(exist_ok=True)
+        (OUTPUT_DIR / "eval_results.json").write_text(json.dumps(results, indent=2, ensure_ascii=False))
+        (OUTPUT_DIR / "eval_summary.md").write_text(summary)
     print(summary)
+    if selected:
+        for case in cases:
+            for i, r in enumerate(results[case["case"]], 1):
+                print(f"--- case {case['case']} run {i}: {r.get('category')}\n{r.get('draft_reply', r.get('error'))}\n")
 
 
 if __name__ == "__main__":
