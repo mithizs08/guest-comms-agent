@@ -167,6 +167,7 @@ def run(dry_run: bool, local: bool) -> None:
         _, data = imap.uid("SEARCH", "X-GM-RAW", f'"{query}"')
         uids = data[0].split()[:MAX_PER_RUN]
         print(f"{len(uids)} unprocessed email(s){' (dry run)' if dry_run else ''}")
+        processed = errors = 0
 
         for uid in uids:
             message_id = None
@@ -195,6 +196,7 @@ def run(dry_run: bool, local: bool) -> None:
                     "platform": result["platform"], "property_code": result["property_code"],
                     "category": result["category"], "draft_created": draft_created,
                 })
+                processed += 1
                 if dry_run:
                     print(f"\n--- {msg['Subject']}")
                     print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -206,7 +208,12 @@ def run(dry_run: bool, local: bool) -> None:
                 # One bad email (or a Claude/network hiccup) shouldn't stop the
                 # rest. It isn't labelled, so the next run tries it again.
                 log({"status": "error", "mode": mode, "message_id": message_id, "error": f"{type(e).__name__}: {e}"})
+                errors += 1
                 print(f"\n--- Skipped an email: {type(e).__name__}: {e}")
+
+        # One line per run, even when the inbox is empty, so every scheduled
+        # run leaves a log showing Gmail and HubSpot were both reached.
+        log({"status": "run_complete", "mode": mode, "found": len(uids), "processed": processed, "errors": errors})
     finally:
         try:
             imap.logout()
