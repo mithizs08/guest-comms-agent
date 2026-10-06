@@ -7,6 +7,17 @@ rest of the guest-safe fields stored as JSON in rental_guest_info.
 
 Usage (one-time upload from data/properties.json):
     python src/hubspot_client.py
+
+HubSpot keys:
+    The agent only reads, so day to day HUBSPOT_TOKEN should be a read-only
+    key (crm.objects.companies.read). That way a bug or a manipulated email
+    can't change the CRM.
+
+    The upload is the only code that writes. It needs a separate key with:
+        crm.objects.companies.write   create/update the property companies
+        crm.schemas.companies.write   create the 3 custom properties
+    Put that key in HUBSPOT_TOKEN only while running the upload, then switch
+    back to the read-only key.
 """
 
 import json
@@ -111,6 +122,8 @@ def list_rental_companies(client: HubSpotClient) -> list[dict]:
 
 
 def upload(properties: list[dict], client: HubSpotClient) -> None:
+    # Needs the WRITE key (see module docstring). With the read-only key,
+    # the first request below fails with a 403.
     for definition in CUSTOM_PROPERTIES:
         # 409 means the property already exists, so re-running the upload is safe.
         client.request(
@@ -168,7 +181,15 @@ class HubSpotPropertySource:
 def main() -> None:
     load_dotenv(ROOT / ".env")
     properties = json.loads((ROOT / "data" / "properties.json").read_text())
-    upload(properties, HubSpotClient())
+    try:
+        upload(properties, HubSpotClient())
+    except PropertySourceError as e:
+        # The most likely cause is the read-only key still being in .env.
+        raise SystemExit(
+            f"Upload failed: {e}\nThe upload needs a HubSpot key with "
+            "crm.objects.companies.write and crm.schemas.companies.write. "
+            "See the notes at the top of src/hubspot_client.py."
+        )
     print(f"Uploaded {len(properties)} properties (guest-safe fields only).")
 
 
