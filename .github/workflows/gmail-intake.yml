@@ -3,7 +3,9 @@ name: Gmail intake
 
 on:
   schedule:
-    - cron: "*/15 * * * *"  # every 15 minutes (UTC); GitHub may run it late
+    # Every 15 minutes (UTC), off the :00/:15/:30/:45 marks where GitHub's
+    # scheduler is busiest and most likely to delay or drop runs.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:         # adds the "Run workflow" button
 
 # Two overlapping runs could both draft a reply to the same email, so a new
