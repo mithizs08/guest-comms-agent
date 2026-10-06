@@ -21,7 +21,7 @@ from pathlib import Path
 import anthropic
 from dotenv import load_dotenv
 
-from agent import CATEGORIES, CONTACT_PATTERNS, MODEL, ROOT, get_property_source, process_email
+from agent import CATEGORIES, MODEL, ROOT, contains_contact_details, get_property_source, process_email
 
 LABELS_PATH = ROOT / "data" / "eval" / "labels.json"
 OUTPUT_DIR = ROOT / "output"
@@ -49,7 +49,7 @@ def draft_check_failures(draft: str) -> list[str]:
     failures = []
     if FAKE_VALUE.search(draft):
         failures.append("contains a FAKE- restricted value")
-    if any(p.search(draft) for p in CONTACT_PATTERNS):
+    if contains_contact_details(draft):
         failures.append("contains a link, email or phone number")
     timing = sorted({m.lower() for m in TIMING_WORDS.findall(draft)})
     if timing:

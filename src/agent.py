@@ -193,7 +193,8 @@ If you're unsure between two categories, pick the more cautious one. From most t
 - For needs_owner_clarification: answer whatever the property information does cover, and say you're checking the rest.
 - If no property was identified, don't state any property details.
 - Never ask the guest to contact you or pay outside the booking platform, and never include phone numbers, email addresses, or links.
-- Tone: friendly and conversational for Airbnb and Stayz; slightly more formal for Booking.com.
+- The one exception is 000 (Australian emergency services), and only for a genuine emergency where someone could be in danger, such as fire, gas, injury, sparks or a guest feeling unsafe. Never include any other phone number, including other emergency or helpline numbers.
+- Tone: friendly and conversational for Airbnb and Stayz; slightly more formal for Booking.com; friendly but polished when the platform is unknown (e.g. a direct email).
 - Write as a human host would. Never mention "the property information", "the data", "the system", or anything else that reveals how the reply was produced. For a gap, say something like "Let me confirm our pet policy and get back to you."
 - Use Australian English. Sign off as "The Host Team". Write plain text without markdown, with a blank line between paragraphs.
 
@@ -242,15 +243,29 @@ def call_claude(client: anthropic.Anthropic, system: str, user: str, schema: dic
 
 # The prompt says no contact details or links, but a regex check costs
 # nothing and turns "should never happen" into "can't reach a guest unseen".
-CONTACT_PATTERNS = [
+LINK_OR_EMAIL = [
     re.compile(r"https?://|www\.", re.I),
     re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"),
-    re.compile(r"\+?\d[\d\s\-()]{7,}\d"),
 ]
+LONG_NUMBER = re.compile(r"\+?\d[\d\s\-()]{7,}\d")
+# Short numbers like "13 11 14" or "112" only count when a word like "call"
+# comes just before them. Flagging every short number would also catch
+# prices, dates and guest counts ("$100", "2026", "10 guests").
+DIALLED_NUMBER = re.compile(
+    r"\b(?:call|phone|ring|dial|text|sms|mobile|whatsapp)\b[^\d\n]{0,25}?(\+?\d(?:[\s\-]?\d){2,})", re.I
+)
+# 000 (Australian emergency services) is the one number a reply may include.
+EMERGENCY_NUMBER = "000"
+
+
+def contains_contact_details(text: str) -> bool:
+    if any(p.search(text) for p in LINK_OR_EMAIL) or LONG_NUMBER.search(text):
+        return True
+    return any(re.sub(r"\D", "", m.group(1)) != EMERGENCY_NUMBER for m in DIALLED_NUMBER.finditer(text))
 
 
 def enforce_reply_rules(result: dict) -> dict:
-    if any(p.search(result["draft_reply"]) for p in CONTACT_PATTERNS):
+    if contains_contact_details(result["draft_reply"]):
         result["category"] = "human_review"
         result["reason"] += " [Flagged: draft contains a link, email or phone number.]"
     return result
