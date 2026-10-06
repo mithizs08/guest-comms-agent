@@ -1,0 +1,53 @@
+name: Gmail intake
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # every 15 minutes (UTC); GitHub may run it late
+  workflow_dispatch:         # adds the "Run workflow" button
+
+# Two overlapping runs could both draft a reply to the same email, so a new
+# run waits for the previous one instead of running alongside it.
+concurrency:
+  group: gmail-intake
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # Offline tests first: if a change broke the agent's safety checks,
+      # the intake step is skipped and no drafts are written.
+      - name: Offline tests
+        run: python -m pytest -q
+
+      - name: Gmail intake
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ALLOWED_SENDERS: ${{ secrets.ALLOWED_SENDERS }}
+        run: python src/gmail_intake.py
+
+      # always(): the log matters most when the intake step failed.
+      - name: Upload intake log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: intake-log-${{ github.run_id }}
+          path: output/intake_log.jsonl
+          if-no-files-found: ignore
+          retention-days: 14

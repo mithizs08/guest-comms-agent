@@ -70,3 +70,16 @@ def test_direct_email_has_unknown_platform_but_matches_property():
 
     assert platform_from_rules(parsed) is None  # falls back to Claude, which should say "unknown"
     assert identify_property(parsed, PROPERTIES)["property_code"] == "NOR-01"
+
+
+def test_allowlist_limits_search_to_approved_senders():
+    assert gmail_intake.search_query("") == gmail_intake.UNPROCESSED_QUERY
+    query = gmail_intake.search_query("a@example.com, b@example.org")
+    assert query.endswith("{from:a@example.com from:b@example.org}")
+
+
+def test_allowlist_rejects_anything_but_addresses():
+    # The value goes into a Gmail search, so it must not smuggle in extra terms.
+    import pytest
+    with pytest.raises(ValueError):
+        gmail_intake.search_query('a@example.com" OR in:anywhere')

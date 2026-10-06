@@ -9,7 +9,9 @@ Usage:
     python src/gmail_intake.py --dry-run   # process and print, change nothing in Gmail
     python src/gmail_intake.py --local     # use properties.json instead of HubSpot
 
-Needs GMAIL_ADDRESS and GMAIL_APP_PASSWORD in .env.
+Needs GMAIL_ADDRESS and GMAIL_APP_PASSWORD in .env. Optional
+ALLOWED_SENDERS (comma-separated addresses) limits which senders are
+processed; if it's empty, every unread email is.
 """
 
 import email
@@ -43,6 +45,18 @@ MAX_PER_RUN = 20
 # stands out to the human reviewing drafts, so "unread" alone can't tell us
 # what's been handled. The label can.
 UNPROCESSED_QUERY = f"in:inbox is:unread -label:{PROCESSED_LABEL}"
+
+
+def search_query(allowed_senders: str) -> str:
+    # The inbox address is guessable, so anyone could email it and spend
+    # Claude credit. Filtering in the Gmail search means other senders' emails
+    # are never fetched, so they can't use up the per-run cap either.
+    senders = [s.strip() for s in allowed_senders.split(",") if s.strip()]
+    if not senders:
+        return UNPROCESSED_QUERY
+    if any(not re.fullmatch(r"[\w.+-]+@[\w-]+(\.[\w-]+)+", s) for s in senders):
+        raise ValueError("ALLOWED_SENDERS must be a comma-separated list of email addresses")
+    return f"{UNPROCESSED_QUERY} {{{' '.join(f'from:{s}' for s in senders)}}}"
 
 
 class StaticPropertySource:
@@ -149,7 +163,8 @@ def run(dry_run: bool, local: bool) -> None:
         if not dry_run:
             ensure_labels(imap)
             folder = drafts_folder(imap)
-        _, data = imap.uid("SEARCH", "X-GM-RAW", f'"{UNPROCESSED_QUERY}"')
+        query = search_query(os.environ.get("ALLOWED_SENDERS", ""))
+        _, data = imap.uid("SEARCH", "X-GM-RAW", f'"{query}"')
         uids = data[0].split()[:MAX_PER_RUN]
         print(f"{len(uids)} unprocessed email(s){' (dry run)' if dry_run else ''}")
 
