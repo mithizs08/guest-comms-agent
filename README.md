@@ -2,6 +2,21 @@
 
 A demo AI agent for a Sydney short-term rental business. It reads guest emails, works out which booking platform (Airbnb, Stayz, Booking.com) and which property each one is about, and uses Claude to draft a reply from approved property information only. Each email gets a triage label: routine, human review, urgent, or needs owner clarification. It is built for a small operator who wants routine questions answered faster without losing control. **It only drafts replies. It never sends anything.** A person reviews and sends every reply from Gmail.
 
+## About this project
+
+Built by [Zareen Shyma](https://www.linkedin.com/in/zareen-shyma) in October 2026, in response to a project brief from a Sydney short-term rental business.
+
+- **Why:** to show a working version of the brief's three milestones before applying, rather than just describing how I'd do it.
+- **How:** I designed the system and made the product, safety and testing decisions, and used Claude Code to write and test the code.
+
+Key decisions:
+- Drafts only, never sends. A person approves every reply.
+- Restricted data (codes, owner contact details, address) never reaches the model.
+- The CRM key is read-only.
+- When the triage category is unclear, it picks the more cautious one.
+- Tested against a labelled set that includes prompt-injection and data-leak attempts.
+- Deployment limits are reported as observed, not as intended.
+
 ![Gmail inbox with triage labels and draft replies](docs/inbox.png)
 
 ## How it works
