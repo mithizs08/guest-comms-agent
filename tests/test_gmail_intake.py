@@ -83,3 +83,38 @@ def test_allowlist_rejects_anything_but_addresses():
     import pytest
     with pytest.raises(ValueError):
         gmail_intake.search_query('a@example.com" OR in:anywhere')
+
+
+class FakeImapWithDrafts(FakeImap):
+    """Drafts folder contains drafts for the given thread IDs."""
+
+    def __init__(self, threads_with_drafts=()):
+        super().__init__()
+        self.threads_with_drafts = set(threads_with_drafts)
+        self.selected = []
+
+    def select(self, folder, readonly=False):
+        self.selected.append(folder)
+        return "OK", [b"1"]
+
+    def uid(self, command, *args):
+        if command == "SEARCH" and args[0] == "X-GM-THRID":
+            return "OK", [b"7" if args[1] in self.threads_with_drafts else b""]
+        return super().uid(command, *args)
+
+
+def test_retry_after_crash_does_not_create_second_draft():
+    # A previous run saved a draft for thread 123 and crashed before labelling.
+    imap = FakeImapWithDrafts(threads_with_drafts={"123"})
+    saved = gmail_intake.save_draft_once(imap, '"[Gmail]/Drafts"', "123", parse(GUEST_EMAIL), "Hi", "you@example.com")
+
+    assert saved is False and imap.appended == []
+    assert imap.selected[-1] == "INBOX"  # back in the inbox, so labelling still works
+
+
+def test_draft_saved_when_thread_has_none():
+    imap = FakeImapWithDrafts(threads_with_drafts={"999"})
+    saved = gmail_intake.save_draft_once(imap, '"[Gmail]/Drafts"', "123", parse(GUEST_EMAIL), "Hi", "you@example.com")
+
+    assert saved is True and len(imap.appended) == 1
+    assert imap.selected[-1] == "INBOX"

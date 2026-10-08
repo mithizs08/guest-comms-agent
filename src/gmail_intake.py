@@ -124,6 +124,27 @@ def save_draft_reply(imap, folder: str, original: email.message.Message, reply_t
         raise RuntimeError(f"Saving draft failed: {status}")
 
 
+def thread_has_draft(imap, folder: str, thread_id: str) -> bool:
+    # A run can crash after saving a draft but before labelling the email,
+    # so the next run would see it as new. Checking the thread for a draft
+    # first means that retry never creates a second one. It also skips
+    # threads where someone on the team has already started a reply.
+    imap.select(folder, readonly=True)
+    try:
+        _, data = imap.uid("SEARCH", "X-GM-THRID", thread_id)
+        return bool(data[0].split())
+    finally:
+        imap.select("INBOX")
+
+
+def save_draft_once(imap, folder: str, thread_id: str, original, reply_text: str, account: str) -> bool:
+    """Save a draft unless the thread already has one. Returns True if one was saved."""
+    if thread_id and thread_has_draft(imap, folder, thread_id):
+        return False
+    save_draft_reply(imap, folder, original, reply_text, account)
+    return True
+
+
 def add_labels(imap, uid: bytes, labels: list[str]) -> None:
     quoted = " ".join(f'"{label}"' for label in labels)
     status, _ = imap.uid("STORE", uid, "+X-GM-LABELS", f"({quoted})")
@@ -173,8 +194,10 @@ def run(dry_run: bool, local: bool) -> None:
             message_id = None
             try:
                 # BODY.PEEK reads without marking the email as read.
-                _, msg_data = imap.uid("FETCH", uid, "(BODY.PEEK[])")
+                _, msg_data = imap.uid("FETCH", uid, "(X-GM-THRID BODY.PEEK[])")
                 msg = email.message_from_bytes(msg_data[0][1], policy=email.policy.default)
+                thread = re.search(rb"X-GM-THRID (\d+)", msg_data[0][0])
+                thread_id = thread.group(1).decode() if thread else ""
                 message_id = msg["Message-ID"]
 
                 # Never reply to ourselves, or one run's drafts could feed the next.
@@ -187,8 +210,7 @@ def run(dry_run: bool, local: bool) -> None:
                     # Draft first, labels last: if drafting fails the email
                     # isn't marked processed, so it's retried next run.
                     if result["draft_reply"]:
-                        save_draft_reply(imap, folder, msg, result["draft_reply"], account)
-                        draft_created = True
+                        draft_created = save_draft_once(imap, folder, thread_id, msg, result["draft_reply"], account)
                     add_labels(imap, uid, [CATEGORY_LABELS[result["category"]], PROCESSED_LABEL])
 
                 log({
