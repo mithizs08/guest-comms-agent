@@ -4,8 +4,6 @@ A demo AI agent for a Sydney short-term rental business. It reads guest emails, 
 
 ![Gmail inbox with triage labels and draft replies](docs/inbox.png)
 
-Video walkthrough: _link to come_
-
 ## How it works
 
 ```mermaid
