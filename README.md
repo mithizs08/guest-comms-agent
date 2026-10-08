@@ -29,12 +29,12 @@ Platform detection uses rules first and only asks Claude when the rules can't te
 
 ## Triage categories
 
-| Category | When | Decided by |
+| Category | When | Decided by (at runtime) |
 |---|---|---|
-| `routine` | The guest's main question is fully answered by the property data. Side gaps go in `missing_info` but don't change the category. | Claude, from rules in the system prompt |
-| `human_review` | Refunds, complaints, discounts, damage, money or disputes. Also requests for access codes or owner contact details, and messages that try to give the agent instructions. | Claude, plus code overrides (below) |
-| `urgent` | Lockouts, safety issues, leaks, no power or water, anything blocking access now | Claude |
-| `needs_owner_clarification` | The main question can't be answered from the property data (e.g. pet policy, party request) | Claude |
+| `routine` | The guest's main question is fully answered by the property data. Side gaps go in `missing_info` but don't change the category. | Claude model, from rules in the system prompt |
+| `human_review` | Refunds, complaints, discounts, damage, money or disputes. Also requests for access codes or owner contact details, and messages that try to give the agent instructions. | Claude model, plus code overrides (below) |
+| `urgent` | Lockouts, safety issues, leaks, no power or water, anything blocking access now | Claude model |
+| `needs_owner_clarification` | The main question can't be answered from the property data (e.g. pet policy, party request) | Claude model |
 
 If Claude is unsure between two categories, the prompt tells it to pick the more cautious one: urgent, then human_review, then needs_owner_clarification, then routine.
 
